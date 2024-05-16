@@ -1,0 +1,6 @@
+__pycache__
+datasets
+validation
+weights
+runs
+yolov8n.pt
