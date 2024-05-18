@@ -5,7 +5,7 @@ from pathlib import Path
 import cv2
 import imutils
 
-from helper import YOLOToCOCOBox
+from cv_helper.helper import YOLOToCOCOBox
 
 #################
 #    General    #
