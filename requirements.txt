@@ -5,3 +5,4 @@ imutils
 opencv-contrib-python
 numpy
 pandas
+natsort
