@@ -2,6 +2,7 @@ import json
 import os
 from pathlib import Path
 
+import cv2
 import numpy as np
 import pandas as pd
 from natsort import natsorted
@@ -63,3 +64,31 @@ def getLabelPaths(imagePaths):
     labelPaths = np.char.replace(labelPaths, ".jpg", ".txt")
     labelPaths = np.char.replace(labelPaths, ".png", ".txt")
     return labelPaths
+
+
+def truncate_video(input_video_path, output_video_path, start_time, end_time):
+    cap = cv2.VideoCapture(str(input_video_path))
+    start_frame = int(start_time * cap.get(cv2.CAP_PROP_FPS))
+    end_frame = int(end_time * cap.get(cv2.CAP_PROP_FPS))
+    fps = int(cap.get(cv2.CAP_PROP_FPS))
+    frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+
+    out = cv2.VideoWriter(
+        str(output_video_path),
+        cv2.VideoWriter_fourcc(*"mp4v"),
+        fps,
+        (frame_width, frame_height),
+    )
+
+    cap.set(cv2.CAP_PROP_POS_FRAMES, start_frame)
+
+    while cap.get(cv2.CAP_PROP_POS_FRAMES) <= end_frame:
+        success, frame = cap.read()
+        if success:
+            out.write(frame)
+        else:
+            break
+
+    out.release()
+    cap.release()

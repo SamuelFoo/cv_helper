@@ -3,7 +3,7 @@ from pathlib import Path
 
 from ultralytics import YOLO
 
-version = "front_yolov8n_210324_1"
+version = "front_yolov8n_070424_1"
 model = YOLO(f"weights/{version}.pt")
 
 # Test Data
@@ -18,9 +18,13 @@ folderNames = [
     # "pooltests/270224/4.bag",
     # "pooltests/120324/21.bag",
     # "sauvc_v2_bboxes_yolo_front/images",
+    # "sauvc_day2/images"
 ]
 
-root_dir = "pooltests/210324/"
+# Predict for subdirectories.
+# root_dir = "pooltests/210324/"
+# root_dir = "pooltests/040424/"
+root_dir = "pooltests/040424/"
 for sub_dir in list(os.walk(f"datasets/raw/{root_dir}"))[0][1]:
     folderNames.append(root_dir + sub_dir)
 
