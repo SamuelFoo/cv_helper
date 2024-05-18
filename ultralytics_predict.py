@@ -3,30 +3,15 @@ from pathlib import Path
 
 from ultralytics import YOLO
 
-version = "front_yolov8n_070424_1"
+version = "hanyang"
 model = YOLO(f"weights/{version}.pt")
 
-# Test Data
-# folderName = "old-bags"
-# source = Path(f"datasets/processed/{folderName}/images/test")
-
-folderNames = [
-    # "pooltests/271223/main_gate_detection",
-    # "pooltests/040124/qual_3.bag/right.raw",
-    # "pooltests/300124/6.bag",
-    # "pooltests/270224/2.bag",
-    # "pooltests/270224/4.bag",
-    # "pooltests/120324/21.bag",
-    # "sauvc_v2_bboxes_yolo_front/images",
-    # "sauvc_day2/images"
-]
+folderNames = ["dungeon/051624"]
 
 # Predict for subdirectories.
 # root_dir = "pooltests/210324/"
-# root_dir = "pooltests/040424/"
-root_dir = "pooltests/040424/"
-for sub_dir in list(os.walk(f"datasets/raw/{root_dir}"))[0][1]:
-    folderNames.append(root_dir + sub_dir)
+# for sub_dir in list(os.walk(f"datasets/raw/{root_dir}"))[0][1]:
+#     folderNames.append(root_dir + sub_dir)
 
 for folder_name in folderNames:
     source = Path(f"datasets/raw/{folder_name}")
