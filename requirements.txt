@@ -1,2 +1,7 @@
 natsort
 xmltodict
+ultralytics
+imutils
+opencv-contrib-python
+numpy
+pandas
