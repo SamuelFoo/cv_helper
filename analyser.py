@@ -25,7 +25,17 @@ def hex_to_rgb(value):
     return tuple(int(value[i : i + lv // 3], 16) for i in range(0, lv, lv // 3))
 
 
-def process_misdetections(root_dir: Path):
+def unzip_yolo_files(folder: Path):
+    for zip_file_path in folder.glob("*yolo.zip"):
+
+        labels_path = Path(folder / "labels")
+        labels_path.mkdir(exist_ok=True)
+
+        with zipfile.ZipFile(zip_file_path, "r") as zip_ref:
+            zip_ref.extractall(labels_path)
+
+
+def group_files_into_folder(root_dir: Path):
     # Move output1_..._.mp4 and output1_..._.zip into output1/
     for path in root_dir.glob("*"):
         file_name = path.name
@@ -35,16 +45,14 @@ def process_misdetections(root_dir: Path):
             Path(root_dir / folder_name).mkdir(exist_ok=True)
             shutil.move(root_dir / file_name, root_dir / folder_name / file_name)
 
+
+def group_files_and_unzip_yolo(root_dir: Path):
+    group_files_into_folder(root_dir)
+
     # Unzip yolo zip files
     for folder in root_dir.glob("*"):
         if folder.is_dir():
-            for zip_file_path in folder.glob("*yolo.zip"):
-
-                labels_path = Path(folder / "labels")
-                labels_path.mkdir(exist_ok=True)
-
-                with zipfile.ZipFile(zip_file_path, "r") as zip_ref:
-                    zip_ref.extractall(labels_path)
+            unzip_yolo_files(folder)
 
 
 def copyFiles(currPaths, datasetType):
@@ -76,19 +84,47 @@ colors_rgb = list(map(hex_to_rgb, colors_hex))
 colors_bgr = list(map(lambda t: t[::-1], colors_rgb))
 
 
+def generate_save_dir(dir_path: Path) -> tuple[Path, Path]:
+    """Creates and return corresponding `save_dir` in `datasets/processed`.
+
+    Args:
+        dir_path (Path): `dir_path` in `datasets/raw`
+
+    Returns:
+        tuple[Path, Path]: `imgRootDir` and `labelRootDir`
+    """
+    save_dir_string = str(dir_path).replace("datasets/raw", "datasets/processed")
+    saveDir = Path(save_dir_string)
+    imgRootDir: Path = saveDir / "images" / "root"
+    labelRootDir: Path = saveDir / "labels" / "root"
+    imgRootDir.mkdir(parents=True, exist_ok=True)
+    labelRootDir.mkdir(parents=True, exist_ok=True)
+    return imgRootDir, labelRootDir
+
+
 def video_to_images(
-    dirPath: Path, videoName, subsample, frame_bounds, display=True, display_interval=5
+    dirPath: Path,
+    videoName: str,
+    subsample: int,
+    frame_bounds: tuple[int, int],
+    display: bool = True,
+    display_interval: int = 5,
 ):
+    """Export video as a YOLO dataset given YOLO labels.
+
+    Args:
+        dirPath (Path): _description_
+        videoName (str): _description_
+        subsample (int): _description_
+        frame_bounds (tuple[int, int]): _description_
+        display (bool, optional): _description_. Defaults to True.
+        display_interval (int, optional): _description_. Defaults to 5.
+    """
     vidPath = dirPath / videoName
     labelPaths = list(dirPath.glob("labels/obj_train_data/*.txt"))
     framesWithLabels = [int(path.stem.strip("frame_")) for path in labelPaths]
 
-    save_dir_string = str(dirPath).replace("datasets/raw", "datasets/processed")
-    saveDir = Path(save_dir_string)
-    imgRootDir = saveDir / "images" / "root"
-    labelRootDir = saveDir / "labels" / "root"
-    imgRootDir.mkdir(parents=True, exist_ok=True)
-    labelRootDir.mkdir(parents=True, exist_ok=True)
+    imgRootDir, labelRootDir = generate_save_dir(dirPath)
 
     frameCount = 0
     cap = cv2.VideoCapture(str(vidPath))
