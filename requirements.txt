@@ -5,3 +5,5 @@ imutils
 opencv-contrib-python
 numpy
 pandas
+rosbags
+natsort

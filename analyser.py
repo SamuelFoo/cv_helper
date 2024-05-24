@@ -53,7 +53,7 @@ def group_files_into_folder(
         file_name = path.name
 
         if path.is_file():
-            folder_name = get_folder_name_fn(path.stem)
+            folder_name = get_folder_name_fn(file_name)
             Path(root_dir / folder_name).mkdir(exist_ok=True)
             shutil.move(root_dir / file_name, root_dir / folder_name / file_name)
 
@@ -85,14 +85,26 @@ def copyFiles(currPaths, datasetType):
 #    Video to Images    #
 #########################
 
+# colors_hex = [
+#     "#fa3253",
+#     "#ff6037",
+#     "#2a7dd1",
+#     "#ff007c",
+#     "#fafa37",
+#     "#3d3df5",
+#     "#cc3366",
+# ]
 colors_hex = [
-    "#fa3253",
-    "#ff6037",
-    "#2a7dd1",
-    "#ff007c",
-    "#fafa37",
+    "#8c78f0",
+    "#33ddff",
     "#3d3df5",
-    "#cc3366",
+    "#5986b3",
+    "#2a7dd1",
+    "#f078f0",
+    "#fa3253",
+    "#ff007c",
+    "#ff6037",
+    "#ff355e",
 ]
 colors_rgb = list(map(hex_to_rgb, colors_hex))
 colors_bgr = list(map(lambda t: t[::-1], colors_rgb))
