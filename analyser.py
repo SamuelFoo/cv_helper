@@ -1,6 +1,7 @@
 import shutil
 import zipfile
 from pathlib import Path
+from typing import Callable
 
 import cv2
 import imutils
@@ -35,19 +36,32 @@ def unzip_yolo_files(folder: Path):
             zip_ref.extractall(labels_path)
 
 
-def group_files_into_folder(root_dir: Path):
-    # Move output1_..._.mp4 and output1_..._.zip into output1/
+def group_files_into_folder(
+    root_dir: Path, get_folder_name_fn: Callable[[str], str] = lambda x: x.split("_")[0]
+):
+    """Groups files with similar names into the same folder.
+    Files with the same output when passed into `folder_name_fn`
+    will be grouped into the same folder.
+
+    Args:
+        root_dir (Path): Root directory.
+        get_folder_name_fn (Callable[[str], str], optional):
+            Function that gets the folder name from the file name.
+            Defaults to a function that splits by `_` and returns the first part.
+    """
     for path in root_dir.glob("*"):
         file_name = path.name
 
         if path.is_file():
-            folder_name = path.stem.split("_")[0]
+            folder_name = get_folder_name_fn(path.stem)
             Path(root_dir / folder_name).mkdir(exist_ok=True)
             shutil.move(root_dir / file_name, root_dir / folder_name / file_name)
 
 
-def group_files_and_unzip_yolo(root_dir: Path):
-    group_files_into_folder(root_dir)
+def group_files_and_unzip_yolo(
+    root_dir: Path, get_folder_name_fn: Callable[[str], str] = lambda x: x.split("_")[0]
+):
+    group_files_into_folder(root_dir, get_folder_name_fn)
 
     # Unzip yolo zip files
     for folder in root_dir.glob("*"):
