@@ -81,6 +81,20 @@ def copyFiles(currPaths, datasetType):
         shutil.copy2(src, dst)
 
 
+def replace_path_string(path: Path, old_str: str, new_str: str) -> Path:
+    """Replaces substring in Path object.
+
+    Args:
+        path (Path): input path
+        old_str (str): old substring to be replaced
+        new_str (str): new substring to replace with
+
+    Returns:
+        Path: modified path
+    """
+    return Path(str(path).replace(old_str, new_str))
+
+
 #########################
 #    Video to Images    #
 #########################

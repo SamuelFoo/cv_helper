@@ -3,10 +3,11 @@ from pathlib import Path
 
 from ultralytics import YOLO
 
-version = "hanyang"
+version = "yolov8n_250524_1"
 model = YOLO(f"weights/{version}.pt")
 
-folderNames = ["dungeon/051624"]
+# folderNames = ["dungeon/051624"]
+folderNames = ["RMUL_2023_NA"]
 
 # Predict for subdirectories.
 # root_dir = "pooltests/210324/"
@@ -25,7 +26,7 @@ for folder_name in folderNames:
     # results would be a generator which is more friendly to memory by setting stream=True
     results = model.predict(
         source=source,
-        show=False,
+        show=True,
         save_txt=True,
         project=project,
         name=f"{vidName}",
