@@ -83,19 +83,6 @@ def group_files_into_folder(
             shutil.move(root_dir / file_name, root_dir / folder_name / file_name)
 
 
-def group_files_and_unzip_yolo(
-    root_dir: Path,
-    file_paths: List[Path],
-    get_folder_name_fn: Callable[[str], str] = lambda x: x.split("_")[0],
-) -> None:
-    group_files_into_folder(root_dir, file_paths, get_folder_name_fn)
-
-    # Unzip yolo zip files
-    for folder in root_dir.glob("*"):
-        if folder.is_dir():
-            unzip_yolo_files(folder)
-
-
 def copyFiles(currPaths, datasetType):
     if len(currPaths) == 0:
         return

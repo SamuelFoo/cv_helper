@@ -9,3 +9,4 @@ rosbags
 natsort
 onnx
 openpyxl
+pyperclip
