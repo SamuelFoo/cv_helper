@@ -1,7 +1,7 @@
 import shutil
 import zipfile
 from pathlib import Path
-from typing import Callable
+from typing import Callable, Generator, List
 
 import cv2
 import imutils
@@ -37,24 +37,44 @@ def unzip_yolo_files(folder: Path):
             zip_ref.extractall(labels_path)
 
 
+def exclusive_glob(
+    root_dir: Path, pattern: str, exclude_patterns: List[str] = []
+) -> Generator[Path, None, None]:
+    """Glob that excludes patterns.
+
+    Args:
+        root_dir (Path): Root directory.
+        pattern (str): Glob pattern.
+        exclude_patterns (List[str], optional): List of glob patterns to exclude. Defaults to [].
+
+    Returns:
+        Generator[Path, None, None]: Generator glob object.
+    """
+    exclude_paths = set().union(
+        *[set(root_dir.glob(exclude_pattern)) for exclude_pattern in exclude_patterns]
+    )
+    paths: List[Path] = set(root_dir.glob("*")) - exclude_paths
+    return paths
+
+
 def group_files_into_folder(
     root_dir: Path,
+    file_paths: List[Path],
     get_folder_name_fn: Callable[[str], str] = lambda x: x.split("_")[0],
-    exclude_suffix: str = "",
-):
+) -> None:
     """Groups files with similar names into the same folder.
     Files with the same output when passed into `folder_name_fn`
     will be grouped into the same folder.
 
     Args:
         root_dir (Path): Root directory.
+        file_paths (List[Path], optional): List of file paths.
         get_folder_name_fn (Callable[[str], str], optional):
             Function that gets the folder name from the file name.
             Defaults to a function that splits by `_` and returns the first part.
-        exclude_suffix (str): File extensions to exclude
     """
-    # See https://stackoverflow.com/questions/46353568/how-to-exclude-some-files-when-reading-with-glob-glob
-    for path in root_dir.glob(f"*[!{exclude_suffix}]"):
+
+    for path in file_paths:
         file_name = path.name
 
         if path.is_file():
@@ -64,9 +84,11 @@ def group_files_into_folder(
 
 
 def group_files_and_unzip_yolo(
-    root_dir: Path, get_folder_name_fn: Callable[[str], str] = lambda x: x.split("_")[0]
-):
-    group_files_into_folder(root_dir, get_folder_name_fn)
+    root_dir: Path,
+    file_paths: List[Path],
+    get_folder_name_fn: Callable[[str], str] = lambda x: x.split("_")[0],
+) -> None:
+    group_files_into_folder(root_dir, file_paths, get_folder_name_fn)
 
     # Unzip yolo zip files
     for folder in root_dir.glob("*"):
