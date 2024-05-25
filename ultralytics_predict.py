@@ -1,20 +1,26 @@
 import os
 from pathlib import Path
 
+from natsort import natsorted
 from ultralytics import YOLO
 
-version = "yolov8n_250524_1"
+version = "yolov8n_250524_4"
 model = YOLO(f"weights/{version}.pt")
 
 # folderNames = ["dungeon/051624"]
-folderNames = ["RMUL_2023_NA"]
+# folderNames = ["RMUL_2023_NA"]
+folderNames = []
 
-# Predict for subdirectories.
-# root_dir = "pooltests/210324/"
-# for sub_dir in list(os.walk(f"datasets/raw/{root_dir}"))[0][1]:
-#     folderNames.append(root_dir + sub_dir)
+# Predict for subdirectories at a certain depth relative to `root_dir`
+dir_name = "RMUL_2023_NA/"
+root_dir = Path(f"datasets/raw") / dir_name
+depth = 1
 
-for folder_name in folderNames:
+for root, dirs, files in os.walk(root_dir):
+    if len(Path(root).parents) - len(root_dir.parents) == depth:
+        folderNames.append(str(Path(root).relative_to("datasets/raw")))
+
+for folder_name in natsorted(folderNames):
     source = Path(f"datasets/raw/{folder_name}")
 
     # folderName = "input"
@@ -26,7 +32,7 @@ for folder_name in folderNames:
     # results would be a generator which is more friendly to memory by setting stream=True
     results = model.predict(
         source=source,
-        show=True,
+        show=False,
         save_txt=True,
         project=project,
         name=f"{vidName}",

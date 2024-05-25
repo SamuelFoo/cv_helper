@@ -106,9 +106,7 @@ def split_video_by_csv(dir_path: Path, video_path: Path, csv_path: Path):
     end_times = df["End Time"]
 
     for i, (start_time, end_time) in enumerate(zip(start_times, end_times)):
-        output_dir_path = dir_path / f"output_{i}"
-        output_dir_path.mkdir(exist_ok=True)
-        output_video_path = output_dir_path / f"output.mp4"
+        output_video_path = dir_path / f"output_{i}.mp4"
         truncate_video(video_path, output_video_path, start_time, end_time)
 
 
