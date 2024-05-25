@@ -5,8 +5,9 @@ from typing import Callable
 
 import cv2
 import imutils
+import pandas as pd
 
-from cv_helper.helper import YOLOToCOCOBox
+from cv_helper.helper import YOLOToCOCOBox, truncate_video
 
 #################
 #    General    #
@@ -37,7 +38,9 @@ def unzip_yolo_files(folder: Path):
 
 
 def group_files_into_folder(
-    root_dir: Path, get_folder_name_fn: Callable[[str], str] = lambda x: x.split("_")[0]
+    root_dir: Path,
+    get_folder_name_fn: Callable[[str], str] = lambda x: x.split("_")[0],
+    exclude_suffix: str = "",
 ):
     """Groups files with similar names into the same folder.
     Files with the same output when passed into `folder_name_fn`
@@ -48,8 +51,10 @@ def group_files_into_folder(
         get_folder_name_fn (Callable[[str], str], optional):
             Function that gets the folder name from the file name.
             Defaults to a function that splits by `_` and returns the first part.
+        exclude_suffix (str): File extensions to exclude
     """
-    for path in root_dir.glob("*"):
+    # See https://stackoverflow.com/questions/46353568/how-to-exclude-some-files-when-reading-with-glob-glob
+    for path in root_dir.glob(f"*[!{exclude_suffix}]"):
         file_name = path.name
 
         if path.is_file():
@@ -93,6 +98,18 @@ def replace_path_string(path: Path, old_str: str, new_str: str) -> Path:
         Path: modified path
     """
     return Path(str(path).replace(old_str, new_str))
+
+
+def split_video_by_csv(dir_path: Path, video_path: Path, csv_path: Path):
+    df = pd.read_csv(csv_path, index_col=None)
+    start_times = df["Start Time"]
+    end_times = df["End Time"]
+
+    for i, (start_time, end_time) in enumerate(zip(start_times, end_times)):
+        output_dir_path = dir_path / f"output_{i}"
+        output_dir_path.mkdir(exist_ok=True)
+        output_video_path = output_dir_path / f"output.mp4"
+        truncate_video(video_path, output_video_path, start_time, end_time)
 
 
 #########################
