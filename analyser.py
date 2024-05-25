@@ -53,7 +53,7 @@ def exclusive_glob(
     exclude_paths = set().union(
         *[set(root_dir.glob(exclude_pattern)) for exclude_pattern in exclude_patterns]
     )
-    paths: List[Path] = set(root_dir.glob("*")) - exclude_paths
+    paths: List[Path] = set(root_dir.glob(pattern)) - exclude_paths
     return paths
 
 
