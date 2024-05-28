@@ -4,8 +4,12 @@ from pathlib import Path
 from natsort import natsorted
 from ultralytics import YOLO
 
-version = "yolov8n_250524_4"
+version = "yolov8n_250524_5"
 model = YOLO(f"weights/{version}.pt")
+
+#####################################
+#   Define folders to predict for   #
+#####################################
 
 # folderNames = ["dungeon/051624"]
 # folderNames = ["RMUL_2023_NA"]
@@ -14,11 +18,15 @@ folderNames = []
 # Predict for subdirectories at a certain depth relative to `root_dir`
 dir_name = "RMUL_2023_NA/"
 root_dir = Path(f"datasets/raw") / dir_name
-depth = 1
+depth = 2
 
 for root, dirs, files in os.walk(root_dir):
     if len(Path(root).parents) - len(root_dir.parents) == depth:
         folderNames.append(str(Path(root).relative_to("datasets/raw")))
+
+#######################
+#   Prediction code   #
+#######################
 
 for folder_name in natsorted(folderNames):
     source = Path(f"datasets/raw/{folder_name}")
@@ -39,6 +47,7 @@ for folder_name in natsorted(folderNames):
         save=True,
         exist_ok=True,
         stream=True,
+        show_labels=False,
     )
 
     for result in results:
