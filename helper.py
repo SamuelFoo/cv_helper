@@ -7,6 +7,8 @@ import numpy as np
 import pandas as pd
 from natsort import natsorted
 
+# TODO: Make paths agnostic to OS.
+
 
 def getPaths(pattern):
     return [Path(path) for path in natsorted(Path(".").glob(pattern))]
@@ -59,8 +61,8 @@ def img2label_paths(img_paths):
     return [sb.join(x.rsplit(sa, 1)).rsplit(".", 1)[0] + ".txt" for x in img_paths]
 
 
-def getLabelPaths(imagePaths):
-    labelPaths = np.char.replace(imagePaths.astype(str), "images", "labels")
+def getLabelPaths(imagePaths: np.ndarray):
+    labelPaths = np.char.replace(imagePaths.astype(str), "/images/", "/labels/")
     labelPaths = np.char.replace(labelPaths, ".jpg", ".txt")
     labelPaths = np.char.replace(labelPaths, ".png", ".txt")
     return labelPaths
