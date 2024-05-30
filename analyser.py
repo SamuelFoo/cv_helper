@@ -167,7 +167,7 @@ def generate_save_dir(dir_path: Path) -> tuple[Path, Path]:
     return imgRootDir, labelRootDir
 
 
-def video_to_images(
+def video_to_yolo_dataset(
     dirPath: Path,
     videoName: str,
     subsample: int,
@@ -248,7 +248,9 @@ def video_to_images(
     cv2.destroyAllWindows()
 
 
-def images_to_images(dir_path: Path, remap_fn: Callable[[str], str] = lambda x: x):
+def images_to_yolo_dataset(
+    dir_path: Path, remap_fn: Callable[[str], str] = lambda x: x
+):
     # Make save directories
     imgRootDir, labelRootDir = generate_save_dir(dir_path)
 
