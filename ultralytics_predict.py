@@ -4,7 +4,7 @@ from pathlib import Path
 from natsort import natsorted
 from ultralytics import YOLO
 
-version = "yolov8n_010624_5"
+version = "yolov8n_010624_6"
 model = YOLO(f"weights/{version}.pt")
 
 #####################################
