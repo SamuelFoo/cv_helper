@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from ultralytics import YOLO
 
 # Load a model
@@ -10,9 +12,12 @@ model = YOLO(
 #     "models/YOLO/yolov8n.pt"
 # )  # build from YAML and transfer weights
 
-hyperparameters = {
-    "fliplr": 0.0,  # Disable flipping left-right as it does not make sense for numbers
-}
+# Load hyperparameters
+hyperparameters_file_path = (
+    Path().home()
+    / "rm_cv"
+    / "hyperparameters/yolov8n_310524_1/best_hyperparameters_1.yaml"
+)
 
 # Train the model
 model.train(
@@ -24,5 +29,5 @@ model.train(
     deterministic=False,
     profile=True,
     augment=True,
-    **hyperparameters,
+    cfg=hyperparameters_file_path,
 )
