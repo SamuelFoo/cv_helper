@@ -14,7 +14,8 @@ def convert_ros_bag(
     img_width: int,
     img_topic: str,
     convert_rgb: bool = False,
-):
+    truncate_front: bool = False,
+) -> None:
     """Convert ROS Bags to MP4.
 
     Args:
@@ -23,7 +24,10 @@ def convert_ros_bag(
         vid_save_path (Path): path to video file
         img_height (int): image height
         img_width (int): image width
+        img_topic (str): topic name of ros image messages
         convert_rgb (bool, optional): If True, will convert from BGR to RGB. Defaults to False.
+        truncate_front (bool, optional): When True, if the number of pixels in the raw message exceeds
+        that specified by the dimensions, truncate from the front. When False, truncate from the back.
     """
 
     fourcc = cv2.VideoWriter_fourcc(*"mp4v")
@@ -41,7 +45,10 @@ def convert_ros_bag(
 
                 # Crop out extra pixels
                 num_pixels = 3 * img_height * img_width
-                img: np.ndarray = img[-num_pixels:]
+                if truncate_front:
+                    img: np.ndarray = img[-num_pixels:]
+                else:
+                    img: np.ndarray = img[:num_pixels]
                 img: np.ndarray = img.reshape(img_height, img_width, 3)
 
                 # Optionally convert from BGR to RGB
@@ -61,6 +68,7 @@ def convert_ros1_bag(
     img_width: int,
     img_topic: str,
     convert_rgb: bool = False,
+    truncate_front: bool = False,
 ):
     """Convert ROS 1 Bags to MP4.
 
@@ -69,7 +77,10 @@ def convert_ros1_bag(
         vid_save_path (Path): path to video file
         img_height (int): image height
         img_width (int): image width
+        img_topic (str): topic name of ros image messages
         convert_rgb (bool, optional): If True, will convert from BGR to RGB. Defaults to False.
+        truncate_front (bool, optional): When True, if the number of pixels in the raw message exceeds
+        that specified by the dimensions, truncate from the front. When False, truncate from the back.
     """
 
     convert_ros_bag(
@@ -80,6 +91,7 @@ def convert_ros1_bag(
         img_width,
         img_topic,
         convert_rgb,
+        truncate_front,
     )
 
 
@@ -90,6 +102,7 @@ def convert_ros2_bag(
     img_width: int,
     img_topic: str,
     convert_rgb: bool = False,
+    truncate_front: bool = False,
 ):
     """Convert ROS 2 Bags to MP4.
 
@@ -98,7 +111,10 @@ def convert_ros2_bag(
         vid_save_path (Path): path to video file
         img_height (int): image height
         img_width (int): image width
+        img_topic (str): topic name of ros image messages
         convert_rgb (bool, optional): If True, will convert from BGR to RGB. Defaults to False.
+        truncate_front (bool, optional): When True, if the number of pixels in the raw message exceeds
+        that specified by the dimensions, truncate from the front. When False, truncate from the back.
     """
 
     convert_ros_bag(
@@ -109,4 +125,5 @@ def convert_ros2_bag(
         img_width,
         img_topic,
         convert_rgb,
+        truncate_front,
     )

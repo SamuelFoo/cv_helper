@@ -6,7 +6,7 @@ from ultralytics import YOLO
 # model = YOLO("yolov8n.yaml")  # build a new model from YAML
 # model = YOLO("yolov8s.yaml")
 model = YOLO(
-    "weights/yolov8n_010624_6.pt"
+    "weights/yolov8n_010624_7.pt"
 )  # load a pretrained model (recommended for training)
 # model = YOLO("yolov8n.yaml").load(
 #     "models/YOLO/yolov8n.pt"
@@ -22,7 +22,7 @@ model = YOLO(
 # Set starting tuning hyperparameters
 hyperparameters = {
     "fliplr": 0.0,  # Disable flipping left-right as it does not make sense for numbers
-    "hsv_s": 0.8, 
+    "hsv_s": 0.8,
     "shear": 10,
     "perspective": 0.0006,
 }
