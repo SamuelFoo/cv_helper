@@ -1,6 +1,6 @@
 from ultralytics import YOLO
 
-weights_file_name = "yolov8n_030624_imgsz_640_1.pt"
+weights_file_name = "yolov8n_050624_imgsz_640_1.pt"
 model = YOLO(f"weights/{weights_file_name}")
 
 # imgsz = (384, 512)
