@@ -70,11 +70,11 @@ def getLabelPaths(imagePaths: np.ndarray):
 
 def truncate_video(input_video_path, output_video_path, start_time, end_time):
     cap = cv2.VideoCapture(str(input_video_path))
-    start_frame = int(start_time * cap.get(cv2.CAP_PROP_FPS))
-    end_frame = int(end_time * cap.get(cv2.CAP_PROP_FPS))
     fps = int(cap.get(cv2.CAP_PROP_FPS))
     frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    start_frame = int(start_time * fps)
+    end_frame = int(end_time * fps)
 
     out = cv2.VideoWriter(
         str(output_video_path),
@@ -84,6 +84,10 @@ def truncate_video(input_video_path, output_video_path, start_time, end_time):
     )
 
     cap.set(cv2.CAP_PROP_POS_FRAMES, start_frame)
+
+    # cap.set may fail for videos with B-frames
+    while cap.get(cv2.CAP_PROP_POS_FRAMES) < start_frame:
+        _, frame = cap.read()
 
     while cap.get(cv2.CAP_PROP_POS_FRAMES) <= end_frame:
         success, frame = cap.read()
