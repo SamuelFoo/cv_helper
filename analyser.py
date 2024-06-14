@@ -136,14 +136,15 @@ def split_video_by_csv(dir_path: Path, video_path: Path, csv_path: Path):
 colors_hex = [
     "#8c78f0",
     "#33ddff",
-    "#3d3df5",
+    "#aaf0d1",
     "#5986b3",
-    "#2a7dd1",
-    "#f078f0",
-    "#fa3253",
+    "#34d1b7",
+    "#733380",
+    "#fa7dbb",
     "#ff007c",
     "#ff6037",
     "#ff355e",
+    "#b83df5",
 ]
 colors_rgb = list(map(hex_to_rgb, colors_hex))
 colors_bgr = list(map(lambda t: t[::-1], colors_rgb))
