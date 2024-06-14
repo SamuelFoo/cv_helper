@@ -233,7 +233,12 @@ def video_to_yolo_dataset(
                         )
 
                 frame = imutils.resize(frame, height=500)
-                cv2.imshow(str(dirPath / videoName), frame)
+
+                winname = str(dirPath / videoName)
+                cv2.namedWindow(winname)  # Create a named window
+                cv2.moveWindow(winname, 0, 200)
+                cv2.imshow(winname, frame)
+
                 key = cv2.waitKey(display_interval)
                 if key == ord("q") or key == ord("Q"):
                     break
@@ -314,13 +319,15 @@ def convert_predicted_labels_to_yolo_dataset(
     dataset_dir = root_dir / "predicted_labels_for_cvat_import"
     new_labels_dir = dataset_dir / "obj_train_data"
     new_labels_dir.mkdir(parents=True, exist_ok=True)
-    
+
     with open(dataset_dir / "train.txt", "w") as train_txt_file:
         for label_path in natsorted(labels_dir.glob("*.txt")):
             new_label_name: str = new_label_name_generator(label_name=label_path.name)
             new_label_path = new_labels_dir / new_label_name
             shutil.copy2(label_path, new_label_path)
-            train_txt_file.write(f"data/obj_train_data/{new_label_path.stem}{image_ext}\n")
+            train_txt_file.write(
+                f"data/obj_train_data/{new_label_path.stem}{image_ext}\n"
+            )
 
     shutil.copy2("cv_helper/cvat_yolo_metadata/obj.data", dataset_dir)
     shutil.copy2("cv_helper/cvat_yolo_metadata/obj.names", dataset_dir)
