@@ -1,17 +1,17 @@
 import json
 import os
+import shutil
 from pathlib import Path
 
 import cv2
 import numpy as np
 import pandas as pd
-from natsort import natsorted
+
 
 # TODO: Make paths agnostic to OS.
-
-
-def getPaths(pattern):
-    return [Path(path) for path in natsorted(Path(".").glob(pattern))]
+def move_and_replace(src: Path, dst: Path):
+    shutil.rmtree(dst, ignore_errors=True)
+    shutil.move(src, dst)
 
 
 def getBoxesCoords(boxes):
