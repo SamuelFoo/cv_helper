@@ -6,7 +6,7 @@ from ultralytics import YOLO
 # model = YOLO("yolov8n.yaml")  # build a new model from YAML
 # model = YOLO("yolov8s.yaml")
 model = YOLO(
-    "weights/yolov8n_050624_imgsz_640_1.pt"
+    "weights/yolov8n_150624_imgsz_640_1.pt"
 )  # load a pretrained model (recommended for training)
 # model = YOLO("yolov8n.yaml").load(
 #     "models/YOLO/yolov8n.pt"
