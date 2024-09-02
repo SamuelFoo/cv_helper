@@ -10,17 +10,22 @@ bridge = CvBridge()
 import argparse
 
 
-def convert_ros_bag(
-    bag_path: Path,
-    vid_save_path: Path,
-    img_topic: str,
-) -> None:
-    def get_next_image(connection: Connection, rawdata: bytes):
-        msg = reader.deserialize(rawdata, connection.msgtype)
-        img: np.ndarray = bridge.compressed_imgmsg_to_cv2(msg, "bgr8")
-        return img
-
+def get_ros_bag_topics(bag_path: Path):
     with AnyReader([bag_path]) as reader:
+        return reader.topics
+
+
+def convert_ros_bag(bag_path: Path, vid_save_path: Path, img_topic: str) -> None:
+    with AnyReader([bag_path]) as reader:
+
+        def get_next_image(connection: Connection, rawdata: bytes):
+            msg = reader.deserialize(rawdata, connection.msgtype)
+            if connection.msgtype == "sensor_msgs/msg/Image":
+                img: np.ndarray = bridge.imgmsg_to_cv2(msg, "bgr8")
+            elif connection.msgtype == "sensor_msgs/msg/CompressedImage":
+                img: np.ndarray = bridge.compressed_imgmsg_to_cv2(msg, "bgr8")
+            return img
+
         # Get img_width and img_height from first image
         messages = reader.messages()
         connection, _, rawdata = next(messages)
@@ -62,12 +67,22 @@ if __name__ == "__main__":
         default=None,
         help="Destination of the video file.",
     )
+    parser.add_argument(
+        "--image-topic",
+        "-t",
+        action="store",
+        default=None,
+        help="Name of ROS topic that contains the images.",
+    )
 
     args = parser.parse_args()
 
     infile = args.infile
     outfile = args.outfile
+    img_topic = args.image_topic
 
     convert_ros_bag(
-        bag_path=Path(infile), vid_save_path=Path(outfile), img_topic="/left/compressed"
+        bag_path=Path(infile),
+        vid_save_path=Path(outfile),
+        img_topics=img_topic,
     )
