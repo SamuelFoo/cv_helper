@@ -24,24 +24,28 @@ def convert_ros_bag(bag_path: Path, vid_save_path: Path, img_topic: str) -> None
                 img: np.ndarray = bridge.imgmsg_to_cv2(msg, "bgr8")
             elif connection.msgtype == "sensor_msgs/msg/CompressedImage":
                 img: np.ndarray = bridge.compressed_imgmsg_to_cv2(msg, "bgr8")
+            else:
+                return None
             return img
 
-        # Get img_width and img_height from first image
-        messages = reader.messages()
-        connection, _, rawdata = next(messages)
-        img = get_next_image(connection=connection, rawdata=rawdata)
-        img_height, img_width, _ = img.shape
-
-        # Initialize videowriter to output video
-        fourcc = cv2.VideoWriter_fourcc(*"mp4v")
-        out = cv2.VideoWriter(str(vid_save_path), fourcc, 24.0, (img_width, img_height))
+        out = None
 
         # Iterate over messages
-        for connection, _, rawdata in messages:
+        for connection, _, rawdata in reader.messages():
             if connection.topic == img_topic:
 
                 # Get next image
                 img: np.ndarray = get_next_image(connection=connection, rawdata=rawdata)
+
+                if img is not None:
+                    if out is None:
+                        img_height, img_width, _ = img.shape
+
+                        # Initialize videowriter to output video
+                        fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+                        out = cv2.VideoWriter(
+                            str(vid_save_path), fourcc, 24.0, (img_width, img_height)
+                        )
 
                 # Write to video
                 out.write(img)
