@@ -5,10 +5,11 @@ from typing import Callable, Generator, List
 
 import cv2
 import imutils
+import numpy as np
 import pandas as pd
 from natsort import natsorted
 
-from cv_helper.helper import YOLOToCOCOBox, truncate_video
+from cv_helper.helper import YOLOToCOCOBox, getLabelPaths, truncate_video
 
 #################
 #    General    #
@@ -84,15 +85,15 @@ def group_files_into_folder(
             shutil.move(root_dir / file_name, root_dir / folder_name / file_name)
 
 
-def copyFiles(currPaths, datasetType):
-    if len(currPaths) == 0:
+def copyFiles(curr_paths: List[Path], dataset_type: str):
+    if len(curr_paths) == 0:
         return
 
-    saveDir = Path(currPaths[0].replace("root", datasetType)).parent
-    saveDir.mkdir(parents=True, exist_ok=True)
+    save_dir = Path(str(curr_paths[0]).replace("root", dataset_type)).parent
+    save_dir.mkdir(parents=True, exist_ok=True)
 
-    for src in currPaths:
-        dst = src.replace("root", datasetType)
+    for src in curr_paths:
+        dst = str(src).replace("root", dataset_type)
         shutil.copy2(src, dst)
 
 
@@ -258,42 +259,148 @@ def images_to_yolo_dataset(
     dir_path: Path, remap_fn: Callable[[str], str] = lambda x: x
 ):
     # Make save directories
-    imgRootDir, labelRootDir = generate_save_dir(dir_path)
+    img_root_dir, label_root_dir = generate_save_dir(dir_path)
 
-    imgPaths = natsorted(list(dir_path.rglob("*.[jp][pn]g")))
-    labelPaths = list(dir_path.glob("labels/obj_train_data/*.txt"))
-    stems_with_labels = [path.stem for path in labelPaths]
+    img_paths = natsorted(list(dir_path.rglob("*.[jp][pn]g")))
+    label_paths = list(dir_path.glob("labels/obj_train_data/*.txt"))
+    stems_with_labels = [path.stem for path in label_paths]
 
-    for imgPath, labelPath in zip(imgPaths, labelPaths):
+    for img_path, label_path in zip(img_paths, label_paths):
         # Skip if label does not exist
-        if not imgPath.stem in stems_with_labels:
+        if not img_path.stem in stems_with_labels:
             continue
 
         # Copy image only if there is a label
-        shutil.copy2(imgPath, imgRootDir / imgPath.name)
+        shutil.copy2(img_path, img_root_dir / img_path.name)
 
-        # Get old detections
-        with open(labelPath, "r") as f:
-            fStr = f.read()
-
-        detections = [detection.split(" ") for detection in fStr.strip().split("\n")]
-        new_detections = []
-
-        for detection in detections:
-            # Remap class
-            cls = detection[0]
-            new_detection = detection.copy()
-            new_detection[0] = remap_fn(cls)
-            new_detections.append(new_detection)
-
-        # Convert to new detection
-        new_detections = [" ".join(d) + "\n" for d in new_detections]
-        f = open(
-            (labelRootDir / Path(labelPath).stem).as_posix() + ".txt",
-            "w",
+        # Copy label and remap classes
+        remap_class_labels(
+            label_path,
+            (label_root_dir / Path(label_path).stem).as_posix()
+            + ".txt",  # with_suffix does not handle paths with "." well
+            remap_fn=remap_fn,
         )
+
+
+def remap_class_labels(
+    src_file_path: Path, dst_file_path: Path, remap_fn: Callable[[str], str]
+):
+    # Get old detections
+    with open(src_file_path, "r") as f:
+        file_str = f.read()
+
+    detections = [detection.split(" ") for detection in file_str.strip().split("\n")]
+    new_detections = []
+
+    for detection in detections:
+        # Remap class
+        cls = detection[0]
+        new_detection = detection.copy()
+        new_detection[0] = remap_fn(cls)
+        new_detections.append(new_detection)
+
+    # Convert to new detection
+    new_detections = [" ".join(d) + "\n" for d in new_detections]
+
+    # Write to file
+    with open(dst_file_path, "w") as f:
         f.writelines(new_detections)
-        f.close()
+
+
+def split_train_valid_test(base_dir: Path, proportions_dict: dict):
+    """Create train, valid, and test directories from the root directory.
+
+    Resultant base_dir will have the following structure:
+    ```
+    base_dir
+    ├──images
+    │  ├──root
+    │  ├──train
+    │  ├──valid
+    │  └──test
+    └──labels
+    │  ├──root
+    │  ├──train
+    │  ├──valid
+    │  └──test
+    ```
+
+    Args:
+        base_dir (Path): Base directory containing the images and labels.
+        base_dir should have the following structure:
+        ```
+        base_dir
+        ├──images
+        │  ├──root
+        │  ├──(train)
+        │  ├──(valid)
+        │  └──(test)
+        └──labels
+        │  ├──root
+        │  ├──(train)
+        │  ├──(valid)
+        │  └──(test)
+        ```
+        with optional train, valid, and test directories.
+        Existing train, valid, and test directories will be replaced.
+        proportions_dict (dict): Proportions of dataset in train, valid and test directories.
+    """
+
+    def split_integer(total: int, proportions: list) -> list:
+        """
+        Split an integer as close as possible to given proportions.
+
+        Args:
+            total (int): The integer to split.
+            proportions (dict): Proportions as floats. Must sum to 1.
+
+        Returns:
+            list: List of split integers.
+        """
+        assert sum(proportions) == 1, "Proportions must sum to 1"
+        assert all(
+            proportion >= 0 for proportion in proportions
+        ), "Proportions must be non-negative"
+
+        # Calculate the initial split
+        split_values = [int(total * prop) for prop in proportions]
+
+        # Adjust the split to ensure the sum is equal to the total
+        remainder = total - sum(split_values)
+        for i in range(remainder):
+            split_values[i % len(proportions)] += 1
+
+        return split_values
+
+    def replace_dir(dst_dir: Path, file_paths: List[Path], dataset_type: str):
+        shutil.rmtree(dst_dir, ignore_errors=True)
+        copyFiles(file_paths, dataset_type)
+
+    # Reset each time so that number of processed dirs before does not affect choice.
+    np.random.seed(314159)
+
+    img_paths = np.array(natsorted((base_dir / "images" / "root").glob("*")))
+
+    dataset_types = list(proportions_dict.keys())
+    dataset_props = list(proportions_dict.values())
+    dataset_counts = split_integer(len(img_paths), dataset_props)
+
+    for dataset_type, dataset_count in zip(dataset_types, dataset_counts):
+        if dataset_count == 0:
+            continue
+
+        # Replace images
+        dataset_img_paths = np.random.choice(img_paths, dataset_count, replace=False)
+        dataset_img_dir = base_dir / "images" / dataset_type
+        replace_dir(dataset_img_dir, dataset_img_paths, dataset_type)
+
+        # Replace labels
+        dataset_label_paths = getLabelPaths(dataset_img_paths)
+        dataset_label_dir = base_dir / "labels" / dataset_type
+        replace_dir(dataset_label_dir, dataset_label_paths, dataset_type)
+
+        # Remove paths from pool
+        img_paths = np.setdiff1d(img_paths, dataset_img_paths)
 
 
 #####################################
@@ -332,3 +439,39 @@ def convert_predicted_labels_to_yolo_dataset(
     shutil.copy2("cv_helper/cvat_yolo_metadata/obj.data", dataset_dir)
     shutil.copy2("cv_helper/cvat_yolo_metadata/obj.names", dataset_dir)
     shutil.make_archive(root_dir / dataset_dir.stem, "zip", dataset_dir)
+
+
+#######################
+#    Sanity Checks    #
+#######################
+
+
+def check_train_valid_split(root_dir: Path) -> None:
+    """Check if the train and valid directories have the same number of files as the root directory.
+
+    Args:
+        root_dir (Path): Root directory.
+    """
+
+    def get_subdirs(dir_path: Path) -> List[Path]:
+        return [sub for sub in dir_path.iterdir() if sub.is_dir()]
+
+    # Get list of all directories
+    all_dirs = [d for d in root_dir.glob("**/") if d.is_dir()]
+
+    # Filter directories that have subdirectories but no further subdirectories
+    # These are the "images" and "labels" directories
+    result_dirs: List[Path] = []
+    for d in all_dirs:
+        subdirs = get_subdirs(d)
+        if subdirs and all(not list(get_subdirs(sub)) for sub in subdirs):
+            result_dirs.append(d)
+
+    for result_dir in result_dirs:
+        root_dir = result_dir / "root"
+        train_dir = result_dir / "train"
+        valid_dir = result_dir / "valid"
+        assert len(list(root_dir.glob("*"))) > 0
+        assert len(list(root_dir.glob("*"))) == len(list(train_dir.glob("*"))) + len(
+            list(valid_dir.glob("*"))
+        ), result_dir
