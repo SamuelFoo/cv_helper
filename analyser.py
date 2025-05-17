@@ -10,6 +10,8 @@ import pandas as pd
 from natsort import natsorted
 
 from cv_helper.helper import YOLOToCOCOBox, getLabelPaths, truncate_video
+from supervision.dataset.formats.yolo import yolo_annotations_to_detections, _with_mask
+import supervision as sv
 
 #################
 #    General    #
@@ -307,6 +309,58 @@ def remap_class_labels(
         f.writelines(new_detections)
 
 
+def remap_detections_class_labels(
+    dataset: sv.DetectionDataset,
+    detections: sv.Detections,
+    remap_dict: dict[str, str],
+    remapped_classes: list,
+) -> sv.Detections:
+    # Source: https://github.com/roboflow/supervision/issues/1778#issue-2799947071
+    # Remove predicted classes not in keys to remap
+    detections_class_names = [
+        dataset.classes[class_id] for class_id in detections.class_id
+    ]
+    # Conversion to list is needed for np.isin to work
+    detections = detections[np.isin(detections_class_names, list(remap_dict.keys()))]
+
+    # Remap class names
+    remapped_detections_class_names = [
+        dataset.classes[class_id] for class_id in detections.class_id
+    ]
+
+    # Remap Class IDs based on Class names
+    detections.class_id = np.array(
+        [remapped_classes.index(name) for name in remapped_detections_class_names]
+    )
+
+    return detections
+
+
+def remap_dataset_class_labels(
+    dataset: sv.DetectionDataset, remap_dict: dict[str, str]
+):
+    # Check if all mapped values are within the dataset classes
+    if not all([value in dataset.classes for value in remap_dict.values()]):
+        raise ValueError("All mapped values must be in dataset classes")
+
+    remapped_annotations = []
+    remapped_classes = list(dict.fromkeys(remap_dict.values()))
+    for path, detections in dataset.annotations.items():
+        detections = remap_detections_class_labels(
+            dataset, detections, remap_dict, remapped_classes
+        )
+        remapped_annotations.append((path, detections))
+
+    remapped_annotations = dict(remapped_annotations)
+    remapped_dataset = sv.DetectionDataset(
+        classes=remapped_classes,
+        images=dataset.annotations.keys(),
+        annotations=remapped_annotations,
+    )
+
+    return remapped_dataset
+
+
 def split_train_valid_test(base_dir: Path, proportions_dict: dict):
     """Create train, valid, and test directories from the root directory.
 
@@ -401,6 +455,37 @@ def split_train_valid_test(base_dir: Path, proportions_dict: dict):
 
         # Remove paths from pool
         img_paths = np.setdiff1d(img_paths, dataset_img_paths)
+
+
+def get_bad_label_paths(image_dir: Path, label_dir: Path) -> None:
+    image_files = list(Path(image_dir).glob("*.jpg")) + list(
+        Path(image_dir).glob("*.png")
+    )
+
+    for image_path in image_files:
+        label_path = label_dir / image_path.with_suffix(".txt").name
+
+        if not Path(label_path).exists():
+            continue
+
+        try:
+            image = cv2.imread(image_path)
+            resolution_wh = (image.shape[1], image.shape[0])  # width, height
+
+            with open(label_path, "r") as f:
+                lines = [line.strip() for line in f.readlines() if line.strip()]
+
+            with_masks = _with_mask(lines=lines)
+            _ = yolo_annotations_to_detections(
+                lines=lines,
+                resolution_wh=resolution_wh,
+                with_masks=with_masks,
+                is_obb=False,
+            )
+
+        except Exception as e:
+            print(f"\n❌ Error in file: {label_path}")
+            print(f"   Reason: {e}")
 
 
 #####################################
