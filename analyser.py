@@ -110,7 +110,7 @@ def replace_path_string(path: Path, old_str: str, new_str: str) -> Path:
     Returns:
         Path: modified path
     """
-    return Path(str(path).replace(old_str, new_str))
+    return Path(path.as_posix().replace(old_str, new_str))
 
 
 def split_video_by_csv(dir_path: Path, video_path: Path, csv_path: Path):
@@ -121,6 +121,24 @@ def split_video_by_csv(dir_path: Path, video_path: Path, csv_path: Path):
     for i, (start_time, end_time) in enumerate(zip(start_times, end_times)):
         output_video_path = dir_path / f"output_{i}.mp4"
         truncate_video(video_path, output_video_path, start_time, end_time)
+
+
+def visualize_dataset(dataset: sv.DetectionDataset, visualize_dir: Path):
+    polygon_annotator = sv.PolygonAnnotator()
+    label_annotator = sv.LabelAnnotator()
+
+    visualize_dir.mkdir(parents=True, exist_ok=True)
+
+    for i in range(len(dataset)):
+        img_path, image, annotations = dataset[i]
+        labels = [dataset.classes[class_id] for class_id in annotations.class_id]
+
+        annotated_image = image.copy()
+        annotated_image = polygon_annotator.annotate(annotated_image, annotations)
+        annotated_image = label_annotator.annotate(annotated_image, annotations, labels)
+
+        save_path = visualize_dir / Path(img_path).name
+        cv2.imwrite(save_path, annotated_image)
 
 
 #############################
@@ -162,7 +180,9 @@ def generate_save_dir(dir_path: Path) -> tuple[Path, Path]:
     Returns:
         tuple[Path, Path]: `imgRootDir` and `labelRootDir`
     """
-    save_dir_string = str(dir_path).replace("datasets/raw", "datasets/processed")
+    save_dir_string = replace_path_string(
+        dir_path, "datasets/raw", "datasets/processed"
+    )
     saveDir = Path(save_dir_string)
     imgRootDir: Path = saveDir / "images" / "root"
     labelRootDir: Path = saveDir / "labels" / "root"
@@ -284,6 +304,36 @@ def images_to_yolo_dataset(
         )
 
 
+def images_to_yolo_dataset_v2(
+    img_dir_path: Path,
+    labels_dir_path: Path,
+    remap_fn: Callable[[str], str] = lambda x: x,
+):
+    img_paths = natsorted(list(img_dir_path.rglob("*.[jp][pn]g")))
+
+    img_save_dir = replace_path_string(
+        img_dir_path, "datasets/raw", "datasets/processed"
+    )
+    label_save_dir = replace_path_string(
+        labels_dir_path, "datasets/raw", "datasets/processed"
+    )
+    img_save_dir.mkdir(parents=True, exist_ok=True)
+    label_save_dir.mkdir(parents=True, exist_ok=True)
+
+    for img_path in img_paths:
+        shutil.copy2(img_path, img_save_dir / img_path.name)
+
+        label_path = labels_dir_path / img_path.with_suffix(".txt").name
+        if label_path.exists():
+            # Copy label and remap classes
+            remap_class_labels(
+                label_path,
+                (label_save_dir / Path(label_path).stem).as_posix()
+                + ".txt",  # with_suffix does not handle paths with "." well
+                remap_fn=remap_fn,
+            )
+
+
 def remap_class_labels(
     src_file_path: Path, dst_file_path: Path, remap_fn: Callable[[str], str]
 ):
@@ -291,7 +341,11 @@ def remap_class_labels(
     with open(src_file_path, "r") as f:
         file_str = f.read()
 
-    detections = [detection.split(" ") for detection in file_str.strip().split("\n")]
+    detections = [
+        detection.split(" ")
+        for detection in file_str.strip().split("\n")
+        if detection.strip() != ""
+    ]
     new_detections = []
 
     for detection in detections:
@@ -302,7 +356,13 @@ def remap_class_labels(
         new_detections.append(new_detection)
 
     # Convert to new detection
-    new_detections = [" ".join(d) + "\n" for d in new_detections]
+    try:
+        new_detections = [" ".join(d) + "\n" for d in new_detections]
+    except Exception as e:
+        print(f"Error in file: {src_file_path}")
+        print(f"Reason: {e}")
+        print(f"New detections: {new_detections}")
+        raise e
 
     # Write to file
     with open(dst_file_path, "w") as f:
@@ -325,7 +385,7 @@ def remap_detections_class_labels(
 
     # Remap class names
     remapped_detections_class_names = [
-        dataset.classes[class_id] for class_id in detections.class_id
+        remap_dict.get(dataset.classes[class_id]) for class_id in detections.class_id
     ]
 
     # Remap Class IDs based on Class names
@@ -339,10 +399,6 @@ def remap_detections_class_labels(
 def remap_dataset_class_labels(
     dataset: sv.DetectionDataset, remap_dict: dict[str, str]
 ):
-    # Check if all mapped values are within the dataset classes
-    if not all([value in dataset.classes for value in remap_dict.values()]):
-        raise ValueError("All mapped values must be in dataset classes")
-
     remapped_annotations = []
     remapped_classes = list(dict.fromkeys(remap_dict.values()))
     for path, detections in dataset.annotations.items():
