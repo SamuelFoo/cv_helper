@@ -11,3 +11,6 @@ onnx
 openpyxl
 pyperclip
 supervision
+
+# For ultralytics, https://docs.ultralytics.com/guides/yolo-data-augmentation/#when-starting-a-training-a-see-a-albumentations-blur-reference-does-that-mean-ultralytics-yolo-runs-additional-augmentation-like-blurring
+albumentations
