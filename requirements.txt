@@ -10,3 +10,4 @@ natsort
 onnx
 openpyxl
 pyperclip
+supervision
