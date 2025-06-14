@@ -123,7 +123,10 @@ def split_video_by_csv(dir_path: Path, video_path: Path, csv_path: Path):
         truncate_video(video_path, output_video_path, start_time, end_time)
 
 
-def visualize_dataset(dataset: sv.DetectionDataset, visualize_dir: Path):
+def visualize_dataset(
+    dataset: sv.DetectionDataset, visualize_dir: Path, plot_boxes: bool = True
+):
+    box_annotator = sv.BoxAnnotator()
     polygon_annotator = sv.PolygonAnnotator()
     label_annotator = sv.LabelAnnotator()
 
@@ -134,6 +137,10 @@ def visualize_dataset(dataset: sv.DetectionDataset, visualize_dir: Path):
         labels = [dataset.classes[class_id] for class_id in annotations.class_id]
 
         annotated_image = image.copy()
+
+        if plot_boxes:
+            annotated_image = box_annotator.annotate(annotated_image, annotations)
+
         annotated_image = polygon_annotator.annotate(annotated_image, annotations)
         annotated_image = label_annotator.annotate(annotated_image, annotations, labels)
 
